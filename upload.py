@@ -12,11 +12,8 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 def authenticate_google_drive():
     """Authenticate and create the Google Drive API client."""
     creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first time.
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    # If there are no (valid) credentials available, prompt the user to log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -24,7 +21,6 @@ def authenticate_google_drive():
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
@@ -76,7 +72,7 @@ def upload_large_file(service, file_path):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print("Usage: python upload_large_file.py <file_path>")
+        print("Usage: python upload.py <file_path>")
         sys.exit(1)
 
     file_path = sys.argv[1]
