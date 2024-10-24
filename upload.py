@@ -1,59 +1,88 @@
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 import os
 import sys
 import time
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
-def upload_to_drive(file_path):
-    # Authenticate and create the PyDrive client
-    gauth = GoogleAuth()
+# If modifying these SCOPES, delete the file token.json.
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-    # Command-line authentication (No redirect issues)
-    gauth.LoadCredentialsFile("mycreds.txt")
-    if gauth.credentials is None:
-        # This will give you a link to authenticate manually in your browser
-        gauth.CommandLineAuth()  
-    elif gauth.access_token_expired:
-        gauth.Refresh()  # Refresh the access token if expired
-    else:
-        gauth.Authorize()  # Use saved credentials
+def authenticate_google_drive():
+    """Authenticate and create the Google Drive API client."""
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, prompt the user to log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
 
-    gauth.SaveCredentialsFile("mycreds.txt")  # Save credentials for future use
+    service = build('drive', 'v3', credentials=creds)
+    return service
 
-    drive = GoogleDrive(gauth)
+def upload_large_file(service, file_path):
+    """Uploads a file to Google Drive with progress tracking and returns the shareable link."""
+    file_name = os.path.basename(file_path)
+    file_size = os.path.getsize(file_path)
+    media = MediaFileUpload(file_path, resumable=True)
 
-    try:
-        file_size = os.path.getsize(file_path)  # Get file size in bytes
-        file_to_upload = drive.CreateFile({'title': file_path.split('/')[-1]})
-        file_to_upload.SetContentFile(file_path)
+    # File metadata for upload
+    file_metadata = {
+        'name': file_name,
+        'mimeType': 'application/octet-stream'
+    }
 
-        # Track upload progress
-        start_time = time.time()
-        file_to_upload.Upload()  # Perform the actual upload
+    # Create the file on Drive
+    request = service.files().create(body=file_metadata, media_body=media, fields='id')
 
-        elapsed_time = time.time() - start_time
-        uploaded_bytes = file_size  # Full file size since Upload() doesn't provide progress events
-        speed = uploaded_bytes / elapsed_time / (1024 * 1024)  # MB per second
-        print(f"Uploaded: {uploaded_bytes}/{file_size} bytes (100.00%) at {speed:.2f} MB/s")
+    # Track upload progress
+    start_time = time.time()
+    response = None
+    uploaded_bytes = 0
 
-        # Make the file public
-        file_to_upload.InsertPermission({
-            'type': 'anyone',
-            'value': 'anyone',
-            'role': 'reader'
-        })
+    # Use the request to upload in chunks and track progress
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            uploaded_bytes += status.resumable_progress
+            percentage = (uploaded_bytes / file_size) * 100
+            elapsed_time = time.time() - start_time
+            speed = uploaded_bytes / elapsed_time / (1024 * 1024)  # MB per second
+            print(f"Uploaded: {uploaded_bytes}/{file_size} bytes ({percentage:.2f}%) at {speed:.2f} MB/s")
 
-        # Get the shareable link
-        file_link = file_to_upload['alternateLink']
-        print(f"File uploaded successfully. Public link: {file_link}")
+    print(f"Upload complete. File ID: {response['id']}")
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    # Make the file public
+    service.permissions().create(
+        fileId=response['id'],
+        body={'type': 'anyone', 'role': 'reader'},
+    ).execute()
 
-if __name__ == "__main__":
+    # Get the shareable link
+    shareable_link = f"https://drive.google.com/file/d/{response['id']}/view"
+    print(f"Public link: {shareable_link}")
+    return shareable_link
+
+if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print("Usage: python upload_to_drive.py <file_path>")
+        print("Usage: python upload_large_file.py <file_path>")
         sys.exit(1)
 
     file_path = sys.argv[1]
-    upload_to_drive(file_path)
+    if not os.path.exists(file_path):
+        print(f"File not found: {file_path}")
+        sys.exit(1)
+
+    service = authenticate_google_drive()
+    upload_large_file(service, file_path)
