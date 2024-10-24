@@ -1,14 +1,15 @@
-# Google Drive File Downloader
+# Google Drive File Uploader
 
 ## Overview
 
-A simple Python script to download files from Google Drive using file IDs, supporting both public and private files. The script includes progress tracking and creates the destination file if it doesn't exist.
+A Python script to upload files to Google Drive using the Google Drive API. This script supports both small and large file uploads, provides progress tracking, and makes the uploaded file public.
 
 ## Features
 
-- Download public and private files from Google Drive.
-- Progress tracking during download.
-- Automatic creation of the destination file and directory.
+- Upload files to Google Drive.
+- Supports progress tracking (upload speed, percentage).
+- Automatically creates the file if it doesn't exist.
+- Makes uploaded files public and retrieves the shareable link.
 
 ## Requirements
 
@@ -21,14 +22,22 @@ A simple Python script to download files from Google Drive using file IDs, suppo
    ```bash
    git clone https://github.com/yourusername/share2Drive.git
    cd share2Drive
-   ```
+```
 2. Install required libraries:
 ```bash
 pip install -r requirements.txt
 ```
 3. Set up Google Drive API and place credentials.json in the project directory.
 ## Usage
-### Download Public Files
+### From Windows
 ```bash
-python download.py <file_id> <destination_path>
+upload.bat <file_path>
+```
+### From MacOS
+```bash
+upload.sh <file_path>
+```
+### With python
+```bash
+python download.py <file_path>
 ```
