@@ -9,6 +9,7 @@ from googleapiclient.http import MediaFileUpload
 # If modifying these SCOPES, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
+
 def authenticate_google_drive():
     """Authenticate and create the Google Drive API client."""
     creds = None
@@ -27,8 +28,9 @@ def authenticate_google_drive():
     service = build('drive', 'v3', credentials=creds)
     return service
 
-def upload_large_file(service, file_path):
-    """Uploads a file to Google Drive with progress tracking and returns the shareable link."""
+
+def upload_large_file(service, file_path, folder_id=None):
+    """Uploads a file to a specified folder in Google Drive or to the root if no folder ID is provided."""
     file_name = os.path.basename(file_path)
     file_size = os.path.getsize(file_path)
     media = MediaFileUpload(file_path, resumable=True)
@@ -36,7 +38,8 @@ def upload_large_file(service, file_path):
     # File metadata for upload
     file_metadata = {
         'name': file_name,
-        'mimeType': 'application/octet-stream'
+        'mimeType': 'application/octet-stream',
+        'parents': [folder_id] if folder_id else []  # Use empty list for root upload
     }
 
     # Create the file on Drive
@@ -70,15 +73,18 @@ def upload_large_file(service, file_path):
     print(f"Public link: {shareable_link}")
     return shareable_link
 
+
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("Usage: python upload.py <file_path>")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:  # Expects one or two arguments
+        print("Usage: python upload.py <file_path> [<folder_id>]")
         sys.exit(1)
 
     file_path = sys.argv[1]
+    folder_id = sys.argv[2] if len(sys.argv) == 3 else None  # Optional folder ID
+
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         sys.exit(1)
 
     service = authenticate_google_drive()
-    upload_large_file(service, file_path)
+    upload_large_file(service, file_path, folder_id)
