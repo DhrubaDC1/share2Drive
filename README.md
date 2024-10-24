@@ -19,7 +19,7 @@ A Python script to upload files to Google Drive using the Google Drive API. This
 ## Installation
 
 1. Clone the repository:
-   ```bash
+```bash
    git clone https://github.com/yourusername/share2Drive.git
    cd share2Drive
 ```
