@@ -28,7 +28,7 @@ A Python script to upload files to Google Drive using the Google Drive API. This
 pip install -r requirements.txt
 ```
 3. Set up Google Drive API and place credentials.json in the project directory.
-## Usage
+## Usage for uploading to Root
 ### From Windows
 ```bash
 upload.bat <file_path>
@@ -36,8 +36,21 @@ upload.bat <file_path>
 ### From MacOS
 ```bash
 upload.sh <file_path>
-```
+```z
 ### With python
 ```bash
 python download.py <file_path>
+```
+## Usage for uploading to Folder
+### From Windows
+```bash
+upload.bat <file_path> <folder_id>
+```
+### From MacOS
+```bash
+upload.sh <file_path> <folder_id>
+```z
+### With python
+```bash
+python download.py <file_path> <folder_id>
 ```
